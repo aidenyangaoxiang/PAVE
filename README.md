@@ -1,5 +1,7 @@
 # Memento: Persistent Visual Experience for Efficient GUI Agents
 
+> Memento is a lightweight history-guided token-routing framework for frozen GUI agents. It significantly improves low-budget token selection over a current-only controller, consistently outperforms matched random pruning, and exposes a controllable token-efficiency versus grounding-quality trade-off.
+
 Memento is a research prototype for screenshot-based GUI agents. It uses
 **cross-episode visual experience to decide which visual tokens of the current
 screen must be retained**, while keeping the GUI action backbone frozen.
