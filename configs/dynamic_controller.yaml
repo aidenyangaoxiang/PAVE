@@ -1,0 +1,19 @@
+# Default configuration used for the Memento-Dynamic controller.
+model:
+  hidden_dim: 256
+  heads: 4
+  layers: 2
+  anchor_bins: 4
+  dropout: 0.1
+
+training:
+  epochs: 50
+  batch_size: 2
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  seed: 20260812
+
+retrieval:
+  top_k: 3
+  score: "0.5 * clip_screen + 0.3 * clip_task + 0.2 * clip_ocr"
+  prior_temperature: 0.05

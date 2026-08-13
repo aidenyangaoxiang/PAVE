@@ -1,0 +1,7 @@
+[
+  {
+    "experience_id": "episode_001:3",
+    "feature_path": "outputs/features/episode_001_3.pt",
+    "spatial_prior_path": "outputs/priors/episode_001_3.pt"
+  }
+]

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Experiment artifacts: never version data, model weights, or cluster outputs.
+data/
+outputs/
+runs/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.jsonl
+
+# Local and HPC configuration
+.env
+.env.*
+*.sbatch
+slurm-*.out
+logs/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

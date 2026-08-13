@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Memento cached controller feature",
+  "description": "Saved with torch.save. Tensor dimensions are documented in the README.",
+  "type": "object",
+  "required": ["experience_id", "current_tokens", "xy", "task_embedding", "target_mask"],
+  "properties": {
+    "experience_id": {"type": "string"},
+    "current_tokens": {"description": "float tensor [N, D], frozen post-encoder GUI-Owl visual tokens"},
+    "xy": {"description": "float tensor [N, 2], normalized token centers in the original screenshot lattice"},
+    "task_embedding": {"description": "float tensor [D_task], frozen task embedding"},
+    "target_mask": {"description": "bool/float tensor [N], offline sufficient-mask supervision"}
+  }
+}
