@@ -42,6 +42,8 @@ Memento therefore:
 
 ## Method overview
 
+![Memento architecture](figures/memento_architecture_paper.png)
+
 ```text
 Past verified experiences                 Current screenshot + task
           |                                           |
