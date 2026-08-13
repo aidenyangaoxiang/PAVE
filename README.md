@@ -170,23 +170,6 @@ For fair ablations, hold the controller architecture, mask budget, frozen
 backbone, data split, and action evaluator fixed. Change only whether the
 spatial prior is present.
 
-## Evaluation protocol
-
-The prototype uses two complementary evaluations:
-
-1. **Controlled token-budget ablation.** Retain the same Top-K fraction of
-   post-encoder tokens for history-aware and current-only controllers, then
-   measure action grounding quality. This isolates the value of historical
-   experience for token selection.
-2. **Similarity-gated end-to-end route.** Retrieve once, hand off specified
-   high-risk states, send low-similarity states to Full GUI-Owl, and use
-   controller-selected current tokens for the Compact route. Report action
-   quality, post-encoder visual-token reduction, Compact rate, and handoff
-   rate together.
-
-The currently implemented offline action metric is click-in-ground-truth-bbox;
-it is not a substitute for end-to-end task success in a live environment.
-
 ## Reproducibility and safety notes
 
 - No training data, GUIOdyssey assets, GUI-Owl weights, OCR caches, or
