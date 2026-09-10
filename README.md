@@ -1,8 +1,10 @@
-# Memento: Persistent Visual Experience for Efficient GUI Agents
+# PAVE: Persistent Across-Episode Visual Experience for Token-Efficient GUI Agents
 
-> Memento is a lightweight history-guided token-routing framework for frozen GUI agents. It significantly improves low-budget token selection over a current-only controller, consistently outperforms matched random pruning, and exposes a controllable token-efficiency versus grounding-quality trade-off.
+> PAVE is a lightweight history-guided token-routing framework for frozen GUI
+> agents. The Python package retains the historical `memento` name for
+> compatibility with existing experiment artifacts.
 
-Memento is a research prototype for screenshot-based GUI agents. It uses
+PAVE is a research prototype for screenshot-based GUI agents. It uses
 **cross-episode visual experience to decide which visual tokens of the current
 screen must be retained**, while keeping the GUI action backbone frozen.
 
@@ -28,7 +30,7 @@ different question:
 > Can verified experience from past episodes allocate the *current* screen's
 > visual-token budget more effectively?
 
-Memento therefore:
+PAVE therefore:
 
 - keeps the action backbone (currently GUI-Owl) frozen;
 - retrieves similar past page experiences with fixed CLIP screen/task/OCR
@@ -90,6 +92,8 @@ memento/
   models/             # dynamic coarse-to-fine token controller
   retrieval.py        # frozen retrieval score and spatial-prior construction
   guiowl.py           # optional position-aligned GUI-Owl injection adapter
+  qwen.py             # optional position-aligned Qwen2.5-VL injection adapter
+  online.py           # success-conditioned, episode-atomic experience bank
   data.py              # cached-feature dataset
   losses.py            # sparse-mask loss
 scripts/
@@ -97,7 +101,12 @@ scripts/
 configs/               # default model/training configuration
 examples/              # index and cached-feature schema
 tests/                 # alignment and model-shape smoke tests
+integrations/          # benchmark integration contracts
 ```
+
+`scripts/audit_online_bank.py` validates record/label/embedding alignment and
+reports record kinds, per-package coverage, and SHA-256 hashes for a frozen
+online bank. It reads metadata only and does not load either action backbone.
 
 ## Installation
 
@@ -172,6 +181,24 @@ For fair ablations, hold the controller architecture, mask budget, frozen
 backbone, data split, and action evaluator fixed. Change only whether the
 spatial prior is present.
 
+## Online experience lifecycle
+
+`EpisodeAtomicBank` stages records during a rollout and commits them only when
+an external task evaluator reports success. Full-route successes add retrievable
+templates without fabricating sparse masks. Compact-route successes add spatial
+evidence only when their realized retained ratio passes the configured sparsity
+admission rule. Read-only mode supports frozen-bank revisit experiments.
+
+AndroidWorld-specific integration requirements are documented in
+[`integrations/androidworld/README.md`](integrations/androidworld/README.md).
+
+## Backbone adapters
+
+The GUI-Owl and Qwen2.5-VL adapters prune post-encoder/post-merger visual
+tokens. In both cases, selected original indices are sorted before injection
+and applied consistently to visual features, image placeholders, and positional
+IDs. This preserves token-to-position correspondence.
+
 ## Reproducibility and safety notes
 
 - No training data, GUIOdyssey assets, GUI-Owl weights, OCR caches, or
@@ -180,8 +207,9 @@ spatial prior is present.
 - The public code contains no user credentials, API keys, local absolute paths,
   experiment logs, or Slurm scripts.
 - A `Full` fallback and human handoff rules are policy components; offline
-  bbox evaluation cannot establish their online safety. Direct action reuse is
-  a planned online extension and is **not** claimed by this release.
+  bbox evaluation cannot establish their online safety.
+- Online bank writes require an external task-success signal. The package does
+  not infer success from the model's own action text.
 
 ## Citation
 
@@ -189,7 +217,7 @@ If you use this code, please cite the paper once available:
 
 ```bibtex
 @misc{yang2026memento,
-  title={Memento: Persistent Visual Experience for Efficient GUI Agents},
+  title={PAVE: Persistent Across-Episode Visual Experience for Token-Efficient GUI Agents},
   author={Yang, Aiden and collaborators},
   year={2026},
   note={Work in progress}
