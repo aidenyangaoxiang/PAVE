@@ -94,6 +94,7 @@ memento/
   guiowl.py           # optional position-aligned GUI-Owl injection adapter
   qwen.py             # optional position-aligned Qwen2.5-VL injection adapter
   online.py           # success-conditioned, episode-atomic experience bank
+  routing.py          # confidence gate and position-safe token selection
   data.py              # cached-feature dataset
   losses.py            # sparse-mask loss
 scripts/

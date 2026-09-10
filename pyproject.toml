@@ -11,11 +11,11 @@ requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [{name = "Aiden Yang"}]
 dependencies = [
-  "torch>=2.4",
-  "transformers>=4.57",
-  "qwen-vl-utils>=0.0.14",
-  "numpy>=1.26",
-  "Pillow>=10.0",
+  "torch>=2.4,<3",
+  "transformers>=4.57,<5",
+  "qwen-vl-utils>=0.0.14,<0.1",
+  "numpy>=1.26,<3",
+  "Pillow>=10.0,<13",
 ]
 
 [tool.setuptools.packages.find]

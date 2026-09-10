@@ -1,6 +1,6 @@
 """Optional GUI-Owl adapter for position-aligned post-encoder token injection.
 
-This module is intentionally model-specific.  The Memento controller itself
+This module is intentionally model-specific.  The PAVE controller itself
 is backbone-agnostic; this adapter demonstrates the required alignment checks
 for GUI-Owl's 2x2 visual token merge.
 """
@@ -9,6 +9,72 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import torch
+
+
+MODEL_NAME = "mPLUG/GUI-Owl-1.5-8B-Instruct"
+
+
+def make_messages(
+    image: str, task: str, previous_action: str, system_prompt: str
+) -> list[dict]:
+    """Build the single-current-image action prompt used by PAVE."""
+    prompt = (
+        "Please generate the next move according to the UI screenshot, "
+        "instruction and previous actions.\n\n"
+        f"Instruction: {task}\n\nPrevious actions:\n{previous_action or 'None'}"
+    )
+    return [
+        {"role": "system", "content": [{"type": "text", "text": system_prompt}]},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image", "image": image},
+            ],
+        },
+    ]
+
+
+def prepare_state_inputs(model, processor, system_prompt: str, state: dict) -> tuple[dict, int]:
+    """Prepare one GUIOdyssey state without embedding any history image."""
+    try:
+        from qwen_vl_utils import process_vision_info
+    except ImportError as error:  # pragma: no cover - optional runtime dependency
+        raise ImportError("Install qwen-vl-utils to prepare GUI-Owl inputs") from error
+    messages = make_messages(
+        str(state["image_source"]),
+        str(state["task"]),
+        str(state.get("previous_action", "")),
+        system_prompt,
+    )
+    chat = processor.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True
+    )
+    image_inputs, video_inputs = process_vision_info(messages)
+    inputs = processor(
+        text=[chat],
+        images=image_inputs,
+        videos=video_inputs,
+        padding=True,
+        return_tensors="pt",
+    ).to(model.device)
+    return inputs, int(inputs.input_ids.shape[1])
+
+
+def decode(processor, generated: torch.Tensor, prompt_length: int) -> str:
+    return processor.batch_decode(
+        generated[:, prompt_length:], skip_special_tokens=True
+    )[0]
+
+
+def full_generate(
+    model, processor, inputs: dict, prompt_length: int, max_new_tokens: int = 128
+) -> str:
+    with torch.inference_mode():
+        generated = model.generate(
+            **inputs, max_new_tokens=max_new_tokens, do_sample=False
+        )
+    return decode(processor, generated, prompt_length)
 
 
 def merged_grid(image_grid_thw: torch.Tensor, token_count: int) -> tuple[int, int]:
