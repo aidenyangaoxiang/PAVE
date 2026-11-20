@@ -50,17 +50,11 @@ It demonstrates the API and tensor flow; its output is not a benchmark result.
 
 ## How it works
 
-```mermaid
-flowchart TD
-    H[Verified experience from past episodes] --> R[Fixed screen / task / OCR retrieval]
-    Q[Current retrieval embeddings] --> R
-    R --> P[Position-aligned spatial prior]
-    X[Current visual tokens and task embedding] --> C[PAVE coarse-to-fine controller]
-    P --> C
-    C --> K[Select current tokens at original positions]
-    K --> A[Frozen GUI-Owl action model]
-    A --> Y[Next action]
-```
+![Figure 1: PAVE overview from the accompanying manuscript](figures/pave_overview_paper.png)
+
+*Figure 1 from the accompanying manuscript: retrieved visual experience guides
+the controller's selection of current-screen visual tokens, with a frozen
+action model.*
 
 1. **Retrieve experience.** Fixed screen, task, and OCR embedding similarities
    select relevant historical records. The default configuration uses Top-3
