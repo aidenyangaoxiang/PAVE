@@ -9,7 +9,7 @@ description = "PAVE: experience-guided visual token selection for frozen GUI age
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
-authors = [{name = "Aoxiang (Aiden) Yang"}]
+authors = [{name = "Aoxiang Yang"}]
 dependencies = [
   "torch>=2.4,<3",
   "transformers>=4.57,<5",
