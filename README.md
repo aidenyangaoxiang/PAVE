@@ -1,7 +1,7 @@
 # PAVE: Persistent Across-Episode Visual Experience for Token-Efficient GUI Agents
 
 > PAVE is a lightweight history-guided token-routing framework for frozen GUI
-> agents. The Python package retains the historical `memento` name for
+> agents. The Python package retains the historical `PAVE` name for
 > compatibility with existing experiment artifacts.
 
 PAVE is a research prototype for screenshot-based GUI agents. It uses
@@ -10,7 +10,7 @@ screen must be retained**, while keeping the GUI action backbone frozen.
 
 The central premise is simple: repeated use of an application produces stable
 page templates and successful visual experience. Rather than appending this
-experience as more language or image context, Memento turns it into a small,
+experience as more language or image context, PAVE turns it into a small,
 position-aligned prior for a lightweight token controller. The controller then
 selects tokens at their original GUI locations before the frozen action model
 predicts the next action.
@@ -20,11 +20,11 @@ predicts the next action.
 > GUI-Owl integration utilities. It intentionally excludes datasets,
 > checkpoints, experiment outputs, and cluster-specific job scripts.
 
-## Why Memento?
+## Why PAVE?
 
 Existing GUI-agent memory methods commonly add historical text, screenshots, or
 ROI crops to an action model's context. Visual-token pruning methods usually
-use only the current screen or a short local trajectory. Memento asks a
+use only the current screen or a short local trajectory. PAVE asks a
 different question:
 
 > Can verified experience from past episodes allocate the *current* screen's
@@ -46,7 +46,7 @@ PAVE therefore:
 
 ## Method overview
 
-![Memento architecture](figures/memento_architecture_paper.png)
+![PAVE architecture](figures/PAVE_architecture_paper.png)
 
 ```text
 Past verified experiences                 Current screenshot + task
@@ -57,7 +57,7 @@ Past verified experiences                 Current screenshot + task
                                |
 current GUI-Owl post-encoder tokens + task + prior
                                |
-                Memento-Dynamic controller
+                PAVE-Dynamic controller
              coarse context -> fine keep logits
                                |
              selected current tokens (same xy)
@@ -75,12 +75,12 @@ fraction of retrieved records with verified sparse support.
 
 ## Token accounting
 
-All reported Memento token costs refer to **post-encoder visual tokens passed
+All reported PAVE token costs refer to **post-encoder visual tokens passed
 to the frozen GUI-Owl action model**. They are not black-box API billing, nor
 the raw pre-merge patch count, nor total vision-encoder FLOPs.
 
 GUI-Owl uses a 2x2 visual-token merge. For raw visual grid `[1, H, W]`, the
-post-encoder action-model lattice is `[H/2, W/2]`. Memento masks this latter
+post-encoder action-model lattice is `[H/2, W/2]`. PAVE masks this latter
 lattice. During compact inference, visual features, M-RoPE positions,
 deepstack features, and image placeholders are all selected using the same
 original token indices; this is necessary to preserve grounding alignment.
@@ -88,7 +88,7 @@ original token indices; this is necessary to preserve grounding alignment.
 ## Repository layout
 
 ```text
-memento/
+PAVE/
   models/             # dynamic coarse-to-fine token controller
   retrieval.py        # frozen retrieval score and spatial-prior construction
   guiowl.py           # optional position-aligned GUI-Owl injection adapter
@@ -112,8 +112,8 @@ online bank. It reads metadata only and does not load either action backbone.
 ## Installation
 
 ```bash
-git clone https://github.com/aidenyangaoxiang/Memento.git
-cd Memento
+git clone https://github.com/aidenyangaoxiang/PAVE.git
+cd PAVE
 python -m venv .venv
 source .venv/bin/activate
 pip install -U pip
@@ -164,7 +164,7 @@ converted into all-one spatial priors.
 ## Training
 
 ```bash
-# Memento-Dynamic: uses history priors
+# PAVE-Dynamic: uses history priors
 python scripts/train_dynamic.py \
   --train-index /path/to/train_index.json \
   --val-index /path/to/val_index.json \
@@ -217,7 +217,7 @@ IDs. This preserves token-to-position correspondence.
 If you use this code, please cite the paper once available:
 
 ```bibtex
-@misc{yang2026memento,
+@misc{yang2026PAVE,
   title={PAVE: Persistent Across-Episode Visual Experience for Token-Efficient GUI Agents},
   author={Yang, Aiden and collaborators},
   year={2026},
