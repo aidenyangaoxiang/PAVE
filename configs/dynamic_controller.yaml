@@ -1,4 +1,4 @@
-# Default configuration used for the Memento-Dynamic controller.
+# Reference configuration for PAVE's controller; train_dynamic.py uses CLI flags.
 model:
   hidden_dim: 256
   heads: 4

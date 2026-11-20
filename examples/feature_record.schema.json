@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Memento cached controller feature",
+  "title": "PAVE cached controller feature",
   "description": "Saved with torch.save. Tensor dimensions are documented in the README.",
   "type": "object",
   "required": ["experience_id", "current_tokens", "xy", "task_embedding", "target_mask"],

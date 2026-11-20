@@ -1,176 +1,134 @@
-# PAVE: Persistent Across-Episode Visual Experience for Token-Efficient GUI Agents
+# PAVE
 
-> PAVE is a lightweight history-guided token-routing framework for frozen GUI
-> agents. The Python package retains the historical `PAVE` name for
-> compatibility with existing experiment artifacts.
+**Experience-guided visual token selection for frozen GUI agents.**
 
-PAVE is a research prototype for screenshot-based GUI agents. It uses
-**cross-episode visual experience to decide which visual tokens of the current
-screen must be retained**, while keeping the GUI action backbone frozen.
+Research code for **[Don't Look Twice: Leveraging Visual Experience for Token-Efficient GUI Agents](https://openreview.net/forum?id=SXHU6x7cQl)**<br>
+**Aoxiang Yang and Sidong Feng** · Manuscript under review at **ICLR 2027**
 
-The central premise is simple: repeated use of an application produces stable
-page templates and successful visual experience. Rather than appending this
-experience as more language or image context, PAVE turns it into a small,
-position-aligned prior for a lightweight token controller. The controller then
-selects tokens at their original GUI locations before the frozen action model
-predicts the next action.
+[Quick start](#quick-start) · [Method](#how-it-works) · [Training](#training) · [Reproducibility](docs/reproducibility.md) · [Citation](#citation)
 
-> **Status.** Research code accompanying an in-progress paper. The public
-> repository contains the core controller, retrieval prior, training code, and
-> GUI-Owl integration utilities. It intentionally excludes datasets,
-> checkpoints, experiment outputs, and cluster-specific job scripts.
+PAVE reuses verified experience from previous GUI tasks to decide which visual
+tokens of the **current screen** to retain. A lightweight controller combines
+current visual features, the task, and a spatial prior retrieved from past
+episodes. The GUI action model stays frozen, and retained tokens keep their
+original spatial positions.
 
-## Why PAVE?
+The repository includes the controller, retrieval and routing utilities,
+training scripts, backbone adapters, and tests. Datasets and trained
+checkpoints are obtained separately; see [release contents](#release-contents).
 
-Existing GUI-agent memory methods commonly add historical text, screenshots, or
-ROI crops to an action model's context. Visual-token pruning methods usually
-use only the current screen or a short local trajectory. PAVE asks a
-different question:
+## Quick start
 
-> Can verified experience from past episodes allocate the *current* screen's
-> visual-token budget more effectively?
-
-PAVE therefore:
-
-- keeps the action backbone (currently GUI-Owl) frozen;
-- retrieves similar past page experiences with fixed CLIP screen/task/OCR
-  embeddings;
-- projects only verified sparse historical masks to a normalized lattice of the
-  current screen;
-- predicts a token-wise keep mask for **current** post-encoder tokens;
-- preserves the original 2-D token locations—no screenshot crop and no ROI
-  stitching;
-- uses a conservative similarity route: high-risk states may be handed to a
-  user, low-similarity states use the Full action model, and similar states use
-  the Compact route.
-
-## Method overview
-
-![PAVE architecture](figures/PAVE_architecture_paper.png)
-
-```text
-Past verified experiences                 Current screenshot + task
-          |                                           |
-          +---- frozen Top-3 retrieval ---------------+
-                               |
-                 position-aligned spatial prior
-                               |
-current GUI-Owl post-encoder tokens + task + prior
-                               |
-                PAVE-Dynamic controller
-             coarse context -> fine keep logits
-                               |
-             selected current tokens (same xy)
-                               |
-                  frozen GUI-Owl action model
-                               |
-                            next action
-```
-
-The controller has a coarse-to-fine, DynamicViT-inspired structure. The coarse
-stage predicts a high-recall context signal; the fine stage predicts one keep
-logit per current token. The historical prior has three channels per current
-token: weighted historical support, cross-history disagreement, and the
-fraction of retrieved records with verified sparse support.
-
-## Token accounting
-
-All reported PAVE token costs refer to **post-encoder visual tokens passed
-to the frozen GUI-Owl action model**. They are not black-box API billing, nor
-the raw pre-merge patch count, nor total vision-encoder FLOPs.
-
-GUI-Owl uses a 2x2 visual-token merge. For raw visual grid `[1, H, W]`, the
-post-encoder action-model lattice is `[H/2, W/2]`. PAVE masks this latter
-lattice. During compact inference, visual features, M-RoPE positions,
-deepstack features, and image placeholders are all selected using the same
-original token indices; this is necessary to preserve grounding alignment.
-
-## Repository layout
-
-```text
-PAVE/
-  models/             # dynamic coarse-to-fine token controller
-  retrieval.py        # frozen retrieval score and spatial-prior construction
-  guiowl.py           # optional position-aligned GUI-Owl injection adapter
-  qwen.py             # optional position-aligned Qwen2.5-VL injection adapter
-  online.py           # success-conditioned, episode-atomic experience bank
-  routing.py          # confidence gate and position-safe token selection
-  data.py              # cached-feature dataset
-  losses.py            # sparse-mask loss
-scripts/
-  train_dynamic.py     # history-aware / current-only training
-configs/               # default model/training configuration
-examples/              # index and cached-feature schema
-tests/                 # alignment and model-shape smoke tests
-integrations/          # benchmark integration contracts
-```
-
-`scripts/audit_online_bank.py` validates record/label/embedding alignment and
-reports record kinds, per-package coverage, and SHA-256 hashes for a frozen
-online bank. It reads metadata only and does not load either action backbone.
-
-## Installation
+Use **Python 3.10 or newer**. From a fresh checkout:
 
 ```bash
 git clone https://github.com/aidenyangaoxiang/PAVE.git
 cd PAVE
 python -m venv .venv
 source .venv/bin/activate
-pip install -U pip
-pip install -e .
-pytest -q
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+
+# Run a small CPU example: no pretrained weights, dataset, or GPU required.
+python examples/controller_demo.py
+
+# Check controller shapes, spatial alignment, routing, and bank behavior.
+python -m pytest -q
 ```
 
-For GUI-Owl inference, install a CUDA-compatible PyTorch build and the
-dependencies required by your GUI-Owl checkout. The adapter assumes the
-`mPLUG/GUI-Owl-1.5-8B-Instruct` interface used in the accompanying
-experiments; model weights are obtained separately from their official source.
+The example constructs a synthetic spatial prior, runs an **untrained**
+controller on 32 visual tokens, and retains 8 tokens in their original order.
+It demonstrates the API and tensor flow; its output is not a benchmark result.
 
-## Data contract
-
-The released code operates on cached frozen features. Each feature record
-(saved with `torch.save`) contains:
-
-| Field | Shape | Meaning |
+| Goal | Entry point | Required resources |
 | --- | --- | --- |
-| `current_tokens` | `[N, D_visual]` | current GUI-Owl post-encoder visual tokens |
-| `xy` | `[N, 2]` | normalized centers in the original current-token lattice |
-| `task_embedding` | `[D_task]` | frozen task representation |
-| `target_mask` | `[N]` | offline sufficient-mask supervision |
-| `experience_id` | string | unique state identifier |
+| Inspect the controller and token selection | [CPU example](examples/controller_demo.py) | Installed package only |
+| Train the controller or a current-only ablation | [Training script](scripts/train_dynamic.py) | Cached features, labels, and spatial priors |
+| Generate offline sufficient-mask supervision | [Supervision script](scripts/generate_guiodyssey_supervision.py) | GUI-Owl weights, screenshots, history bank, embeddings, labels, and action prompt |
+| Connect online evaluation | [AndroidWorld integration contract](integrations/androidworld/README.md) | External benchmark runner and evaluator |
+| Inspect a saved experience bank | [Bank audit](scripts/audit_online_bank.py) | Bank metadata and embeddings |
 
-Each spatial-prior record contains `spatial_prior: [N, 3]`, constructed from
-the query's fixed Top-3 retrieved historical experiences. An example index is
-in [`examples/feature_index.example.json`](examples/feature_index.example.json).
+## How it works
 
-### Building supervision
+```mermaid
+flowchart TD
+    H[Verified experience from past episodes] --> R[Fixed screen / task / OCR retrieval]
+    Q[Current retrieval embeddings] --> R
+    R --> P[Position-aligned spatial prior]
+    X[Current visual tokens and task embedding] --> C[PAVE coarse-to-fine controller]
+    P --> C
+    C --> K[Select current tokens at original positions]
+    K --> A[Frozen GUI-Owl action model]
+    A --> Y[Next action]
+```
 
-The supplied model is trained on offline sufficient-mask labels. A practical
-data-generation procedure is:
+1. **Retrieve experience.** Fixed screen, task, and OCR embedding similarities
+   select relevant historical records. The default configuration uses Top-3
+   retrieval with weights `0.5 / 0.3 / 0.2`.
+2. **Build a spatial prior.** Verified sparse historical masks are projected
+   onto the current token lattice. The three channels encode weighted support,
+   disagreement, and sparse-support fraction.
+3. **Select current tokens.** A DynamicViT-inspired coarse-to-fine controller
+   predicts one keep logit per current token. Budgeted selection returns the
+   selected original indices in spatial sequence order.
+4. **Act with a frozen backbone.** Adapters apply the same indices to visual
+   features and their associated positional information. Historical tokens are
+   not appended to the action model's context.
 
-1. Run the frozen action backbone on the full screenshot.
-2. Keep only states with a valid, externally checkable action outcome (e.g., a
-   click landing inside a ground-truth bounding box).
-3. Search a small family of context-preserving masks—target neighborhood,
-   task-matched OCR, layout bands, and retrieved-history support.
-4. Re-run the frozen action model with each candidate mask.
-5. Select the smallest candidate that preserves the externally verified
-   outcome. If no candidate succeeds, label it **unresolved by the candidate
-   search**, not intrinsically impossible to compact.
+The public similarity router uses the Full route when scoped history is
+missing, similarity is below threshold, or a surface is marked protected.
+Online experience is committed only after an external evaluator reports
+episode success.
 
-The current code deliberately treats full-only labels with care: they are not
-converted into all-one spatial priors.
+### Token accounting
+
+The token budget refers to **post-encoder visual tokens passed to the action
+model**. It does not measure API billing or total vision-encoder computation.
+For GUI-Owl's `2x2` token merge, a raw grid `[1, H, W]` becomes an action-model
+lattice `[H/2, W/2]`. Compact inference must preserve the correspondence
+between selected features, image placeholders, M-RoPE positions, and
+deepstack features.
+
+## Repository layout
+
+```text
+memento/                     # Historical Python import name; method name: PAVE
+  models/                    # Coarse-to-fine token controller
+  retrieval.py               # Retrieval scores and spatial priors
+  routing.py                 # Similarity gate and position-safe token selection
+  guiowl.py                  # GUI-Owl post-encoder adapter
+  qwen.py                    # Qwen2.5-VL post-merger adapter
+  online.py                  # Success-conditioned, episode-atomic experience bank
+  supervision.py             # Offline candidate-mask construction
+  data.py                    # Cached-feature dataset and collation
+  losses.py                  # Sparse-mask training losses
+scripts/                     # Training, supervision generation, and bank audit
+examples/                    # Runnable CPU demo and feature/index schemas
+configs/                     # Reference controller/training/retrieval settings
+integrations/androidworld/   # Contract for an external benchmark runner
+tests/                       # Controller, alignment, routing, and bank checks
+docs/                        # Data preparation and reproduction details
+```
+
+The distribution name remains `memento-gui`, and imports use `memento` and
+`MementoDynamicController`. These historical names are retained for
+compatibility with existing experiments and checkpoints.
 
 ## Training
 
+Prepare the cached tensors and index files described in the
+[data contract](docs/reproducibility.md#cached-feature-data-contract). Index
+paths are resolved relative to the process's working directory; run the
+following commands from the repository root or use absolute paths.
+
 ```bash
-# PAVE-Dynamic: uses history priors
+# History-aware PAVE controller
 python scripts/train_dynamic.py \
   --train-index /path/to/train_index.json \
   --val-index /path/to/val_index.json \
   --out outputs/history_aware
 
-# Matched current-only ablation: same architecture, zero history prior
+# Matched current-only ablation: same controller, zero history prior
 python scripts/train_dynamic.py \
   --train-index /path/to/train_index.json \
   --val-index /path/to/val_index.json \
@@ -178,54 +136,55 @@ python scripts/train_dynamic.py \
   --current-only
 ```
 
-For fair ablations, hold the controller architecture, mask budget, frozen
-backbone, data split, and action evaluator fixed. Change only whether the
-spatial prior is present.
+Training saves best-loss and best-F1 controller checkpoints, epoch metrics,
+and a summary in the output directory. The script refuses to overwrite a
+non-empty output directory. Run `python scripts/train_dynamic.py --help` for
+supported options; `configs/dynamic_controller.yaml` is a reference, not a
+configuration file automatically loaded by this script.
 
-## Online experience lifecycle
+For matched ablations, keep the architecture, token budget, backbone, data
+split, and action evaluator fixed. Change only the presence of the historical
+spatial prior.
 
-`EpisodeAtomicBank` stages records during a rollout and commits them only when
-an external task evaluator reports success. Full-route successes add retrievable
-templates without fabricating sparse masks. Compact-route successes add spatial
-evidence only when their realized retained ratio passes the configured sparsity
-admission rule. Read-only mode supports frozen-bank revisit experiments.
+## Release contents
 
-AndroidWorld-specific integration requirements are documented in
-[`integrations/androidworld/README.md`](integrations/androidworld/README.md).
+| Component | Availability |
+| --- | --- |
+| Controller, retrieval, routing, and online bank | Included |
+| Training and offline supervision scripts | Included |
+| GUI-Owl and Qwen2.5-VL adapter utilities | Included |
+| CPU demo and tests | Included |
+| Training data, screenshots, OCR caches, and frozen feature banks | Not bundled |
+| Backbone weights and trained PAVE checkpoints | Not bundled |
+| Complete AndroidWorld runner and experiment outputs | Not bundled; integration contract provided |
 
-## Backbone adapters
+For GUI-Owl inference, use a CUDA-compatible PyTorch build and dependencies
+compatible with `mPLUG/GUI-Owl-1.5-8B-Instruct`. Obtain backbone weights and
+datasets from their original providers under their respective terms. The CPU
+demo and unit tests do not reproduce the paper's end-to-end benchmark results.
 
-The GUI-Owl and Qwen2.5-VL adapters prune post-encoder/post-merger visual
-tokens. In both cases, selected original indices are sorted before injection
-and applied consistently to visual features, image placeholders, and positional
-IDs. This preserves token-to-position correspondence.
-
-## Reproducibility and safety notes
-
-- No training data, GUIOdyssey assets, GUI-Owl weights, OCR caches, or
-  checkpoints are included here. Obtain and use each resource under its own
-  license/terms.
-- The public code contains no user credentials, API keys, local absolute paths,
-  experiment logs, or Slurm scripts.
-- A `Full` fallback and human handoff rules are policy components; offline
-  bbox evaluation cannot establish their online safety.
-- Online bank writes require an external task-success signal. The package does
-  not infer success from the model's own action text.
+See [reproducibility details](docs/reproducibility.md) for supervision
+generation, online-bank handling, and external integration requirements.
 
 ## Citation
 
-If you use this code, please cite the paper once available:
+The accompanying manuscript is under review. Please preserve that status
+when citing it:
 
 ```bibtex
-@misc{yang2026PAVE,
-  title={PAVE: Persistent Across-Episode Visual Experience for Token-Efficient GUI Agents},
-  author={Yang, Aiden and collaborators},
-  year={2026},
-  note={Work in progress}
+@misc{yang2026dontlooktwice,
+  title = {Don't Look Twice: Leveraging Visual Experience for Token-Efficient GUI Agents},
+  author = {Yang, Aoxiang and Feng, Sidong},
+  year = {2026},
+  howpublished = {\url{https://openreview.net/forum?id=SXHU6x7cQl}},
+  note = {Manuscript under review at ICLR 2027}
 }
 ```
 
-## Acknowledgments
+Machine-readable citation metadata is available in [CITATION.cff](CITATION.cff).
 
-This repository integrates with GUI-Owl but is not affiliated with the GUI-Owl
-authors. Please cite GUI-Owl and any dataset used in your experiments.
+## License and acknowledgments
+
+The code is released under the [MIT License](LICENSE). External models,
+datasets, and dependencies retain their own licenses. PAVE integrates with
+GUI-Owl; please also cite the backbone and datasets used in your experiments.

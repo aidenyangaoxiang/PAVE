@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "Please cite the accompanying manuscript when using PAVE."
+type: software
+title: "PAVE: Experience-guided visual token selection for GUI agents"
+version: 0.2.0
+authors:
+  - family-names: Yang
+    given-names: Aoxiang
+repository-code: "https://github.com/aidenyangaoxiang/PAVE"
+url: "https://github.com/aidenyangaoxiang/PAVE"
+license: MIT
+keywords:
+  - GUI agents
+  - visual token selection
+  - multimodal learning
+  - experience retrieval
+preferred-citation:
+  type: unpublished
+  title: "Don't Look Twice: Leveraging Visual Experience for Token-Efficient GUI Agents"
+  authors:
+    - family-names: Yang
+      given-names: Aoxiang
+    - family-names: Feng
+      given-names: Sidong
+  year: 2026
+  url: "https://openreview.net/forum?id=SXHU6x7cQl"
+  notes: "Manuscript under review at ICLR 2027."
